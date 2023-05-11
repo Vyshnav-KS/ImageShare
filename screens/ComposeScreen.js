@@ -1,9 +1,10 @@
 import {Image, PermissionsAndroid, StyleSheet, Text, View} from 'react-native';
 import React, {useState} from 'react';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
-import storage from '@react-native-firebase/storage';
+
 // import {firebase} from '@react-native-firebase/storage';
 import {TouchableOpacity} from 'react-native';
+import {storage} from '../firebase';
 
 const ComposeScreen = () => {
   const [imageData, setImageData] = useState(null);
@@ -14,10 +15,16 @@ const ComposeScreen = () => {
   };
 
   const uploadImage = async () => {
-    const reference = storage().ref(imageData.assets[0].fileName);
-    const pathToFile = imageData.assets[0].uri;
-    // uploads file
-    await reference.putFile(pathToFile);
+    try {
+      const reference = storage.ref(imageData.assets[0].fileName);
+      const pathToFile = imageData.assets[0].uri;
+      const blob = await (await fetch(pathToFile)).blob();
+
+      console.log(blob);
+      await reference.put(blob);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   // const requestPermission = async () => {
