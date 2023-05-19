@@ -1,64 +1,110 @@
-import {Image, PermissionsAndroid, StyleSheet, Text, View} from 'react-native';
+import {
+  Alert,
+  Image,
+  PermissionsAndroid,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import React, {useState} from 'react';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
+import {useNavigation} from '@react-navigation/native';
 
 // import {firebase} from '@react-native-firebase/storage';
 import {TouchableOpacity} from 'react-native';
-import {storage} from '../firebase';
+import {auth, storage} from '../firebase';
 
 const ComposeScreen = () => {
   const [imageData, setImageData] = useState(null);
+  const [remImage, setRemImage] = useState(true);
+  const navigation = useNavigation();
+
   const openCamera = async () => {
     const result = await launchCamera({mediaType: 'photo'});
     setImageData(result);
+    setRemImage(true);
+    console.log(result);
+  };
+
+  const openGallery = async () => {
+    const options = {
+      mediaType: 'photo',
+      quality: 0.8,
+    };
+
+    const result = await launchImageLibrary(options);
+    setImageData(result);
+    setRemImage(true);
     console.log(result);
   };
 
   const uploadImage = async () => {
     try {
-      const reference = storage.ref(imageData.assets[0].fileName);
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        console.log('User is not signed in');
+        // Handle the case when the user is not signed in
+        return;
+      }
+
+      // const reference = storage.ref(imageData.assets[0].fileName);
+      const reference = storage.ref(
+        `images/${currentUser.uid}/${imageData.assets[0].fileName}`,
+      );
       const pathToFile = imageData.assets[0].uri;
       const blob = await (await fetch(pathToFile)).blob();
 
       console.log(blob);
       await reference.put(blob);
+      console.log('Image uploaded successfully');
+      Alert.alert(
+        'Image Status',
+        'Image uploaded successfully',
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              console.log('OK Pressed');
+              setRemImage(false);
+              navigation.navigate('Home', {
+                timestamp: Date.now(),
+              });
+            },
+          },
+          {
+            text: 'Cancel',
+            onPress: () => console.log('Cancel Pressed'),
+            style: 'cancel',
+          },
+        ],
+        {cancelable: false},
+      );
     } catch (error) {
       console.log(error);
     }
   };
 
-  // const requestPermission = async () => {
-  //   try {
-  //     const granted = await PermissionsAndroid.request(
-  //       PermissionsAndroid.PERMISSIONS.CAMERA,
-  //       {
-  //         title: 'ImageShare App Camera Permission',
-  //         message: 'ImageShare App needs access to your camera',
-  //         buttonNeutral: 'ask me later',
-  //         buttonNegative: 'cancel',
-  //         buttonPositive: 'OK',
-  //       },
-  //     );
-  //     if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-  //       openCamera();
-  //     } else {
-  //       console.log('Permission Denied');
-  //     }
-  //   } catch (err) {
-  //     console.warn(err);
-  //   }
-  // };
-
   return (
     <View style={styles.root}>
       {imageData != null ? (
-        <Image source={{uri: imageData.assets[0].uri}} style={styles.image} />
+        <Image
+          source={remImage ? {uri: imageData.assets[0].uri} : null}
+          style={styles.image}
+        />
       ) : null}
       <View>
-        <TouchableOpacity onPress={openCamera} style={styles.button}>
-          <Text style={styles.buttonText}>Open Camera</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={uploadImage} style={styles.button}>
+        <View style={styles.buttonRow}>
+          <TouchableOpacity onPress={openCamera} style={styles.button}>
+            <Text style={styles.buttonText}>Open Camera</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={openGallery} style={styles.button}>
+            <Text style={styles.buttonText}>Open Gallery</Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity
+          onPress={uploadImage}
+          style={[styles.button, styles.uploadButton]}>
           <Text style={styles.buttonText}>Upload Image</Text>
         </TouchableOpacity>
       </View>
@@ -78,13 +124,17 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   button: {
     backgroundColor: '#003566',
-    width: '100%',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 40,
+    marginTop: 10,
+    margin: 5,
   },
   buttonText: {
     color: 'white',
