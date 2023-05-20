@@ -1,6 +1,7 @@
 import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/storage';
+import 'firebase/compat/firestore';
 
 // import { initializeApp } from 'firebase/app';
 // import { getAuth } from 'firebase/auth';
@@ -29,4 +30,5 @@ if (firebase.apps.length === 0) {
 
 const auth = firebase.auth();
 const storage = firebase.storage();
-export {app, auth, storage};
+const db = firebase.firestore();
+export {app, auth, storage, db};
