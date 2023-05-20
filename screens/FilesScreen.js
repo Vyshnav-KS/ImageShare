@@ -7,33 +7,83 @@ import {
   View,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useCallback, useState} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
 import CheckBox from 'react-native-check-box';
+import {
+  getSharedImages,
+  getUserId,
+  getUsersImage,
+  listAllUsers,
+  shareImageWith,
+} from '../server';
+import {ScrollView} from 'react-native-gesture-handler';
+import {Image} from '@rneui/base';
 
 const FilesScreen = () => {
-  const options = [
-    {id: 1, name: 'Option 1'},
-    {id: 2, name: 'Option 2'},
-    {id: 3, name: 'Option 3'},
-  ];
+  const [userImages, setUserImages] = useState([]);
+  const [sharedImages, setSharedImages] = useState([]);
+  const [options, setoptions] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOptions, setSelectedOptions] = useState([]);
+  const [selectedUsers, setselectedUsers] = useState({});
+
+  const [curImage, setcurImage] = useState();
+
   const toggleDropdown = () => {
     setIsOpen(!isOpen);
   };
-  const handleOptionPress = option => {
-    if (selectedOptions.includes(option)) {
-      setSelectedOptions(selectedOptions.filter(item => item !== option));
-    } else {
-      setSelectedOptions([...selectedOptions, option]);
-    }
+  const handleOptionPress = item => {
+    selectedUsers[item.uid] = !selectedUsers[item.uid];
+    setselectedUsers({...selectedUsers});
   };
 
+  const handleSend = async () => {
+    const url = curImage;
+    const users = Object.keys(selectedUsers);
+    await shareImageWith(users, url);
+    console.log('shared img ' + url, ' with ', users);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      getUsersImage().then(imgs => setUserImages(imgs));
+      getSharedImages().then(imgs => setSharedImages(imgs));
+      listAllUsers().then(users => {
+        setoptions(
+          users
+            .filter(user => user.uid !== getUserId())
+            .map((user, idx) => {
+              return {id: idx, name: user.name, uid: user.uid};
+            }),
+        );
+      });
+    }, []),
+  );
+
+  console.log('renderItem');
+  const images = [...userImages, ...sharedImages];
   return (
     <View style={styles.container}>
-      <View>
-        <Text style={styles.fileText}>photos will be displayed here</Text>
-      </View>
+      <ScrollView>
+        {images.length ? (
+          images.map(img => {
+            return (
+              <TouchableOpacity
+                key={img.imageUrl}
+                onPress={() => setcurImage(img.imageUrl)}>
+                <Image
+                  source={{uri: img.imageUrl}}
+                  alt="img"
+                  style={{width: 200, height: 200}}
+                />
+              </TouchableOpacity>
+            );
+          })
+        ) : (
+          <Text style={styles.fileText}>photos will be displayed here</Text>
+        )}
+      </ScrollView>
       <View>
         <View>
           <TouchableOpacity style={styles.dropDown} onPress={toggleDropdown}>
@@ -58,7 +108,10 @@ const FilesScreen = () => {
                           alignItems: 'center',
                           marginVertical: 8,
                         }}>
-                        <CheckBox onClick={() => {}} />
+                        <CheckBox
+                          onClick={() => {}}
+                          isChecked={selectedUsers[item.uid]}
+                        />
                         <Text style={styles.dropDownText}>{item.name}</Text>
                       </View>
                     </TouchableOpacity>
@@ -75,7 +128,7 @@ const FilesScreen = () => {
           </Modal>
         </View>
 
-        <TouchableOpacity style={styles.button}>
+        <TouchableOpacity style={styles.button} onPress={handleSend}>
           <Text style={styles.buttonText}>Send Files</Text>
         </TouchableOpacity>
       </View>

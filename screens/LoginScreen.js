@@ -9,20 +9,23 @@ import {
 import React, {useEffect, useState} from 'react';
 import {auth} from '../firebase';
 import {useNavigation} from '@react-navigation/native';
+import {createUser} from '../server';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
   //   User registeration
-  const handleSignUp = () => {
-    auth
-      .createUserWithEmailAndPassword(email, password)
-      .then(userCredentials => {
-        const user = userCredentials.user;
-        console.log('Registered with:', user.email);
-      })
-      .catch(error => alert(error.message));
+  const handleSignUp = async () => {
+    try {
+      const cred = await auth.createUserWithEmailAndPassword(email, password);
+      const user = cred.user;
+      console.log('Registered with:', user.email);
+      await createUser();
+    } catch (error) {
+      // eslint-disable-next-line no-alert
+      alert(error.message);
+    }
   };
 
   //  User SignIn
@@ -47,6 +50,7 @@ const LoginScreen = () => {
     });
 
     return unsubscribe;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

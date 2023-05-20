@@ -1,11 +1,4 @@
-import {
-  Alert,
-  Image,
-  PermissionsAndroid,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import {Alert, Image, StyleSheet, Text, View} from 'react-native';
 import React, {useState} from 'react';
 import {launchImageLibrary, launchCamera} from 'react-native-image-picker';
 import {useNavigation} from '@react-navigation/native';
@@ -13,6 +6,7 @@ import {useNavigation} from '@react-navigation/native';
 // import {firebase} from '@react-native-firebase/storage';
 import {TouchableOpacity} from 'react-native';
 import {auth, storage} from '../firebase';
+import {mapImageUpload} from '../server';
 
 const ComposeScreen = () => {
   const [imageData, setImageData] = useState(null);
@@ -56,8 +50,11 @@ const ComposeScreen = () => {
       const blob = await (await fetch(pathToFile)).blob();
 
       console.log(blob);
-      await reference.put(blob);
+      const result = await reference.put(blob);
+      const downloadLink = await result.ref.getDownloadURL();
       console.log('Image uploaded successfully');
+      await mapImageUpload(downloadLink);
+      console.log('Image mapped successfully');
       Alert.alert(
         'Image Status',
         'Image uploaded successfully',
